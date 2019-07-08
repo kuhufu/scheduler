@@ -30,13 +30,6 @@ func (s *Scheduler) Start() {
 	if s.running {
 		return
 	}
-	go s.Run()
-}
-
-func (s *Scheduler) Run() {
-	if s.running {
-		return
-	}
 	s.running = true
 	close(s.start)
 }
