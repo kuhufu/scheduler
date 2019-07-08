@@ -1,6 +1,8 @@
 package scheduler
 
-import "time"
+import (
+	"time"
+)
 
 type Scheduler struct {
 	start   chan struct{}
@@ -21,14 +23,13 @@ func (s *Scheduler) Stop() {
 		return
 	}
 	s.running = false
-	s.stop <- struct{}{}
+	close(s.stop)
 }
 
 func (s *Scheduler) Start() {
 	if s.running {
 		return
 	}
-	s.running = true
 	go s.Run()
 }
 
@@ -37,13 +38,14 @@ func (s *Scheduler) Run() {
 		return
 	}
 	s.running = true
-	s.start <- struct{}{}
+	close(s.start)
 }
 
 func (s *Scheduler) AddTimeoutFunc(duration time.Duration, cmd func()) {
-	timer := time.AfterFunc(duration, cmd)
 	go func() {
-		for{
+		<-s.start
+		timer := time.AfterFunc(duration, cmd)
+		for {
 			select {
 			case <-s.stop:
 				timer.Stop()
@@ -54,10 +56,10 @@ func (s *Scheduler) AddTimeoutFunc(duration time.Duration, cmd func()) {
 }
 
 func (s *Scheduler) AddIntervalFunc(duration time.Duration, cmd func()) {
-	tick := time.NewTicker(duration)
-	tickC := tick.C
-	//tick := time.Tick(duration)
 	go func() {
+		<-s.start
+		tick := time.NewTicker(duration)
+		tickC := tick.C
 		for {
 			select {
 			case <-s.stop:
